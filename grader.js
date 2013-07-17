@@ -29,7 +29,8 @@ var restler = require('restler');
 var util    = require('util');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT= "checks.json";
-var URL_DEFAULT = "http://fierce-reaches-1073.herokuapp.com";
+var URL_DEFAULT = "";
+//"http://fierce-reaches-1073.herokuapp.com";
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
@@ -43,15 +44,16 @@ var assertFileExists = function(infile) {
 
 var assertURLExists = function(inURL) {
     var instr = inURL.toString();
-    restler.get('http://fierce-reaches-1073.herokuapp.com').on('complete', function(result, response) {
+    restler.get(instr).on('complete', function(result, response) {
 	if (result instanceof Error) {
-	    console.error('Error: ' + util.format(response.message) );
+	    console.error('Error (getting URL)): ' + util.format(response.message) );
+	    this.retry(5000);
+	    //process.exit(1);
 	} else {
-	    console.error("Got here");
-	    fs.writeFileSync(urlFile, result);
+//	    console.log(result); // used for debugging
 	}		  
-    });	
-
+    });
+    return instr;
 }
 
 var cheerioHtmlFile = function(htmlfile) {
@@ -93,13 +95,28 @@ if(require.main == module) {
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
     	.option('-u, --url <some_url>', 'URL at which file can be downloaded', clone(assertURLExists), URL_DEFAULT)
 	.parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    //converts JS object->JSON string. 
-    // JSON.stringify is opposite of JSON.parse (JSON string->JS object)
-    // replacer='null' means its unused but need null to pass 3rd arg (can be fn/array to
-    // transform the results. space=4 - returned text isindented by 4 spaces at each level
-    console.log(outJson);
+    if (!program.url) {
+	var checkJson = checkHtmlFile(program.file, program.checks);
+	var outJson = JSON.stringify(checkJson, null, 4);
+	//converts JS object->JSON string.  
+	// JSON.stringify is opposite of JSON.parse (JSON string->JS object)                                 
+	// replacer='null' means its unused but need null to pass 3rd arg (can be fn/array to                
+	// transform the results. space=4 - returned text isindented by 4 spaces at each level               
+	console.log(outJson);
+    } else {
+	restler.get(program.url).on('complete', function(result, response) {
+	
+	    //Saving resulting html to file    
+	    var urlFile = "urlFile.html";
+            // create file if it doesnt exist ('w')    
+            fs.openSync(urlFile, 'w');                                                       
+            fs.writeFileSync(urlFile, result);                                
+            
+	    var checkJson = checkHtmlFile(urlFile, program.checks);
+            var outJson = JSON.stringify(checkJson, null, 4);
+	    console.log(outJson);
+	});
+    } 
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
