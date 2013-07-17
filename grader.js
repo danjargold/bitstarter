@@ -42,6 +42,7 @@ var assertFileExists = function(infile) {
     return instr;
 };
 
+// this is bypassed (removed calling of it further down in .option) as causes double output of the results due to async
 var assertURLExists = function(inURL) {
     var instr = inURL.toString();
     restler.get(instr).on('complete', function(result, response) {
@@ -93,7 +94,7 @@ if(require.main == module) {
     program
     	.option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-    	.option('-u, --url <some_url>', 'URL at which file can be downloaded', clone(assertURLExists), URL_DEFAULT)
+    	.option('-u, --url <some_url>', 'URL at which file can be downloaded')//, clone(assertURLExists), URL_DEFAULT)
 	.parse(process.argv);
     if (!program.url) {
 	var checkJson = checkHtmlFile(program.file, program.checks);
